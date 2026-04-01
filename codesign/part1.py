@@ -106,6 +106,7 @@ __kernel void matmul_register(
     int N)
 {
     __local float Asub[TILE_SIZE][TILE_SIZE];
+    __local float Bsub[TILE_SIZE][TILE_SIZE];
 
     int row    = get_global_id(1);
     int col    = get_global_id(0) * WPT;
@@ -123,6 +124,7 @@ __kernel void matmul_register(
 
         // Charger tuile A en memoire locale
         Asub[localRow][localCol] = A[row*N + t*TILE_SIZE + localCol];
+        Bsub[localRow][localCol] = B[(t*TILE_SIZE + localRow)*N + col];
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -130,7 +132,7 @@ __kernel void matmul_register(
         for(int k = 0; k < TILE_SIZE; k++) {
             float a = Asub[localRow][k];
             for(int w = 0; w < WPT; w++) {
-                results[w] += a * B[(t*TILE_SIZE + k)*N + col + w];
+                results[w] += a * Bsub[k][localCol + w];
             }
         }
 
@@ -142,6 +144,142 @@ __kernel void matmul_register(
         C[row*N + col + w] = results[w];
     }
 }
+// ============================================
+// KERNEL 5 : 2D REGISTER TILING
+// ============================================
+#define RTS 4  // chaque thread calcule RTS x RTS elements
+
+__kernel void matmul_2d_register(
+    __global float* A,
+    __global float* B,
+    __global float* C,
+    int N)
+{
+    __local float Asub[TILE_SIZE][TILE_SIZE];
+    __local float Bsub[TILE_SIZE][TILE_SIZE];
+
+    int row      = get_global_id(1);
+    int col      = get_global_id(0);
+    int localRow = get_local_id(1);
+    int localCol = get_local_id(0);
+
+    float results[RTS][RTS];
+    for(int r = 0; r < RTS; r++)
+        for(int c = 0; c < RTS; c++)
+            results[r][c] = 0.0f;
+
+    int numTiles = N / TILE_SIZE;
+    for(int t = 0; t < numTiles; t++) {
+
+        Asub[localRow][localCol] = A[row*N + t*TILE_SIZE + localCol];
+        Bsub[localRow][localCol] = B[(t*TILE_SIZE + localRow)*N + col];
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        for(int k = 0; k < TILE_SIZE; k++) {
+            for(int r = 0; r < RTS; r++) {
+                float a = Asub[localRow * RTS + r][k];
+                for(int c = 0; c < RTS; c++) {
+                    results[r][c] += a * Bsub[k][localCol * RTS + c];
+                }
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    for(int r = 0; r < RTS; r++)
+        for(int c = 0; c < RTS; c++)
+            C[(row*RTS + r)*N + (col*RTS + c)] = results[r][c];
+}
+
+// ============================================
+// KERNEL 6 : VECTORISATION float4
+// ============================================
+__kernel void matmul_vector(
+    __global float4* A,
+    __global float4* B,
+    __global float4* C,
+    int N)
+{
+    __local float4 Asub[TILE_SIZE][TILE_SIZE/4];
+    __local float4 Bsub[TILE_SIZE][TILE_SIZE/4];
+
+    int row      = get_global_id(1);
+    int col      = get_global_id(0);
+    int localRow = get_local_id(1);
+    int localCol = get_local_id(0);
+
+    float4 sum = (float4)(0.0f);
+
+    int numTiles = N / TILE_SIZE;
+    for(int t = 0; t < numTiles; t++) {
+
+        Asub[localRow][localCol] = A[row*(N/4) + t*(TILE_SIZE/4) + localCol];
+        Bsub[localRow][localCol] = B[(t*TILE_SIZE + localRow)*(N/4) + col];
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        for(int k = 0; k < TILE_SIZE/4; k++) {
+            float4 a = Asub[localRow][k];
+            float4 b = Bsub[k][localCol];
+            sum += a.x * Bsub[k*4+0][localCol]
+                 + a.y * Bsub[k*4+1][localCol]
+                 + a.z * Bsub[k*4+2][localCol]
+                 + a.w * Bsub[k*4+3][localCol];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    C[row*(N/4) + col] = sum;
+}
+
+// ============================================
+// KERNEL 7 : PREFETCHING (double buffer)
+// ============================================
+__kernel void matmul_prefetch(
+    __global float* A,
+    __global float* B,
+    __global float* C,
+    int N)
+{
+    __local float Asub[2][TILE_SIZE][TILE_SIZE];
+    __local float Bsub[2][TILE_SIZE][TILE_SIZE];
+
+    int row      = get_global_id(1);
+    int col      = get_global_id(0);
+    int localRow = get_local_id(1);
+    int localCol = get_local_id(0);
+
+    float sum = 0.0f;
+    int cur = 0, nxt = 1;
+
+    // Charger la premiere tuile
+    Asub[cur][localRow][localCol] = A[row*N + localCol];
+    Bsub[cur][localRow][localCol] = B[localRow*N + col];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    int numTiles = N / TILE_SIZE;
+    for(int t = 1; t < numTiles; t++) {
+
+        // Prefetch tuile suivante
+        Asub[nxt][localRow][localCol] = A[row*N + t*TILE_SIZE + localCol];
+        Bsub[nxt][localRow][localCol] = B[(t*TILE_SIZE + localRow)*N + col];
+
+        // Calculer avec tuile courante
+        for(int k = 0; k < TILE_SIZE; k++) {
+            sum += Asub[cur][localRow][k] * Bsub[cur][k][localCol];
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+        cur ^= 1;
+        nxt ^= 1;
+    }
+
+    // Calculer la derniere tuile
+    for(int k = 0; k < TILE_SIZE; k++) {
+        sum += Asub[cur][localRow][k] * Bsub[cur][k][localCol];
+    }
+
+    C[row*N + col] = sum;
+}
+
 """
 
 # Compiler
