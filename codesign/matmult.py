@@ -57,10 +57,8 @@ __kernel void matmul_coalesced(
 }
 """
 
-# Compiler les kernels
-program = cl.Program(ctx, kernel_code).build()
 
-# Transfert mémoire Host -> Device
+program = cl.Program(ctx, kernel_code).build()
 mf = cl.mem_flags
 A_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=A)
 B_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=B)

@@ -145,7 +145,6 @@ for tile, wpt in configs:
         print(f"{label:40s}: {t:8.2f} ms → {gflops:7.2f} GFLOPS  ({gain:.2f}x)")
         results.append((label, gflops, gain))
     except Exception as e:
-        # ✅ Correction : plus de format 's' sur un int
         print(f"{label:40s}: ERREUR → {e}")
 
 print("=" * 65)

@@ -31,8 +31,8 @@ __kernel void matmul_naive(
     __global float* C,
     int N)
 {
-    int row = get_global_id(1);
-    int col = get_global_id(0);
+    int row = get_global_id(0);
+    int col = get_global_id(1);
     
     float sum = 0.0f;
     for(int k = 0; k < N; k++) {
