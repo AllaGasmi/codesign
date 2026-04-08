@@ -17,23 +17,23 @@ import numpy as np
 import os
 
 # ── Configuration ────────────────────────────────────────────
-# N         = 4096
-N=1024
+N         = 4096
+# N=1024
 TILE_SIZE = 16
-# TSM       = 128
-TSM = 32
-# TSN       = 128
-TSN = 32
+TSM       = 128
+# TSM = 32
+TSN       = 128
+# TSN = 32
 
-# TSK       = 16
-TSK=32
+TSK       = 16
+# TSK=32
 
 TSK4      = TSK // 4
-# WPTM      = 8
-# WPTN      = 8
+WPTM      = 8
+WPTN      = 8
 
-WPTM=4
-WPTN=4
+# WPTM=4
+# WPTN=4
 
 WIDTH     = 4
 WPT       = 4
