@@ -103,8 +103,8 @@ local_rect   = (RTSM, RTSN)
 global_rect  = (N * RTSM // TSM, N * RTSN // TSN)
 
 # ── Benchmark helper ──────────────────────────────────────────
-def benchmark(kern, global_s, local_s, args, label, repeats=3):
-    kern(queue, global_s, local_s, *args).wait()          # warmup
+def benchmark(kern, global_s, local_s, args, label, repeats=20):
+    kern(queue, global_s, local_s, *args).wait()          
     times = []
     for _ in range(repeats):
         ev = kern(queue, global_s, local_s, *args)
