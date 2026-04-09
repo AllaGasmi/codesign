@@ -146,6 +146,25 @@ g_best   = benchmark(program.matmul_best,
                      global_rect,  local_rect,  std,
                      "K9  BEST – prefetch + 2-D register")
 
+# K10 tuned shape (exact-correct winner):
+# TSM=128, TSN=128, TSK=16, WPTM=8, WPTN=8 -> RTSM=16, RTSN=16
+local_k10  = local_rect
+global_k10 = global_rect
+
+g_k10    = benchmark(program.matmul_k10,
+                     global_k10, local_k10, std,
+                     "K10 TUNED K9 + pragma unroll")
+
+# Numerical check vs K2
+C_ref = np.empty_like(C)
+C_k10 = np.empty_like(C)
+program.matmul_coalesced(queue, global_naive, local_naive, *std).wait()
+cl.enqueue_copy(queue, C_ref, C_buf).wait()
+program.matmul_k10(queue, global_k10, local_k10, *std).wait()
+cl.enqueue_copy(queue, C_k10, C_buf).wait()
+max_abs_diff = float(np.max(np.abs(C_k10 - C_ref)))
+print(f"\n  Correctness check (K10 vs K2): max_abs_diff = {max_abs_diff:.6f}")
+
 print("="*70)
 print("\n  Gains vs K2 COALESCED:")
 for label, g in [("K3  Tiling",             g_tile),
@@ -154,8 +173,10 @@ for label, g in [("K3  Tiling",             g_tile),
                  ("K6  2-D register",        g_2dreg),
                  ("K7  float4",              g_f4),
                  ("K8  Wider + register",    g_widereg),
-                 ("K9  BEST (prefetch)",     g_best)]:
+                 ("K9  BEST (prefetch)",     g_best),
+                 ("K10 Tuned K9",            g_k10)]:
     print(f"   {label:30s}: {g/g_coal:.2f}x")
 
 print(f"\n  Overall gain K9 vs K1: {g_best/g_naive:.2f}x")
+print(f"  Gain K10 vs K9        : {g_k10/g_best:.2f}x")
 print("="*70)

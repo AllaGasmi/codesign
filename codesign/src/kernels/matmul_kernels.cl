@@ -453,3 +453,111 @@ __kernel void matmul_best(
             C[(offsetM + tidm + wm*RTSM)*N
               + (offsetN + tidn + wn*RTSN)] = acc[wm][wn];
 }
+
+// ---------------------------------------------------------
+// KERNEL 10 : TUNED K9 (hardcoded winning config)
+//   Derived from systematic parameter sweep of K9 structure.
+//   Winning setup:
+//     TSM=128, TSN=128, TSK=16, WPTM=8, WPTN=8
+//     Work-group = RTSM x RTSN = 16 x 16
+//   Additional winning tweak: explicit pragma unroll on
+//   k/wm/wn accumulation loops (exact-correct and fastest).
+// ---------------------------------------------------------
+#define K10_TSM   128
+#define K10_TSN   128
+#define K10_TSK   16
+#define K10_WPTM  8
+#define K10_WPTN  8
+#define K10_RTSM  16
+#define K10_RTSN  16
+
+__kernel void matmul_k10(
+    __global float* A,
+    __global float* B,
+    __global float* C,
+    int N)
+{
+    __local float Asub[2][K10_TSK][K10_TSM];
+    __local float Bsub[2][K10_TSN][K10_TSK];
+
+    int tidm    = get_local_id(0);
+    int tidn    = get_local_id(1);
+    int offsetM = K10_TSM * get_group_id(0);
+    int offsetN = K10_TSN * get_group_id(1);
+
+    float acc[K10_WPTM][K10_WPTN];
+    for (int wm = 0; wm < K10_WPTM; wm++)
+        for (int wn = 0; wn < K10_WPTN; wn++)
+            acc[wm][wn] = 0.0f;
+
+    float aReg[K10_WPTM];
+    float bReg[K10_WPTN];
+
+    int cur = 0, nxt = 1;
+    int numTiles = N / K10_TSK;
+
+    // Prefetch tile 0
+    for (int wm = 0; wm < K10_WPTM; wm++) {
+        int row = offsetM + tidm + wm*K10_RTSM;
+        Asub[cur][tidn][tidm + wm*K10_RTSM] = A[row*N + tidn];
+    }
+    for (int wn = 0; wn < K10_WPTN; wn++) {
+        int col = offsetN + tidn + wn*K10_RTSN;
+        Bsub[cur][tidn + wn*K10_RTSN][tidm] = B[tidm*N + col];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (int t = 1; t < numTiles; t++) {
+
+        // Load next tile while computing current
+        for (int wm = 0; wm < K10_WPTM; wm++) {
+            int row = offsetM + tidm + wm*K10_RTSM;
+            Asub[nxt][tidn][tidm + wm*K10_RTSM] = A[row*N + t*K10_TSK + tidn];
+        }
+        for (int wn = 0; wn < K10_WPTN; wn++) {
+            int col = offsetN + tidn + wn*K10_RTSN;
+            Bsub[nxt][tidn + wn*K10_RTSN][tidm] = B[(t*K10_TSK + tidm)*N + col];
+        }
+
+        // Compute tile t-1
+        #pragma unroll
+        for (int k = 0; k < K10_TSK; k++) {
+            #pragma unroll
+            for (int wm = 0; wm < K10_WPTM; wm++)
+                aReg[wm] = Asub[cur][k][tidm + wm*K10_RTSM];
+            #pragma unroll
+            for (int wn = 0; wn < K10_WPTN; wn++)
+                bReg[wn] = Bsub[cur][tidn + wn*K10_RTSN][k];
+            #pragma unroll
+            for (int wm = 0; wm < K10_WPTM; wm++)
+                #pragma unroll
+                for (int wn = 0; wn < K10_WPTN; wn++)
+                    acc[wm][wn] += aReg[wm] * bReg[wn];
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+        cur ^= 1;
+        nxt ^= 1;
+    }
+
+    // Compute last tile
+    #pragma unroll
+    for (int k = 0; k < K10_TSK; k++) {
+        #pragma unroll
+        for (int wm = 0; wm < K10_WPTM; wm++)
+            aReg[wm] = Asub[cur][k][tidm + wm*K10_RTSM];
+        #pragma unroll
+        for (int wn = 0; wn < K10_WPTN; wn++)
+            bReg[wn] = Bsub[cur][tidn + wn*K10_RTSN][k];
+        #pragma unroll
+        for (int wm = 0; wm < K10_WPTM; wm++)
+            #pragma unroll
+            for (int wn = 0; wn < K10_WPTN; wn++)
+                acc[wm][wn] += aReg[wm] * bReg[wn];
+    }
+
+    for (int wm = 0; wm < K10_WPTM; wm++)
+        for (int wn = 0; wn < K10_WPTN; wn++)
+            C[(offsetM + tidm + wm*K10_RTSM)*N
+              + (offsetN + tidn + wn*K10_RTSN)] = acc[wm][wn];
+}
