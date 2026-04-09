@@ -4,7 +4,7 @@
 
 - Students (max 4): [Fill names]
 - Group: [Fill group]
-- Date: 2026-04-08
+- Date: 2026-04-09
 
 ## Hardware and OpenCL Devices
 
@@ -47,7 +47,7 @@
 - Max work-item size: [8192, 8192, 8192]
 - Lockstep unit: 128
 
-Source of device info: opencl_devices_result.md
+Source of device info: device_inventory.md
 
 ---
 
@@ -258,9 +258,9 @@ Then we auto-tune around this estimate and across coarse candidates.
 ### Final best result (Part B)
 
 - Best split: NVIDIA 512 rows, Intel 7680 rows
-- Parallel wall time: 3173.87 ms
-- Parallel throughput: 346.43 GFLOPS
-- Speedup vs NVIDIA-only baseline: 3.13x
+- Parallel wall time: 3362.47 ms
+- Parallel throughput: 327.00 GFLOPS
+- Speedup vs NVIDIA-only baseline: 2.94x
 
 Interpretation:
 
@@ -313,12 +313,38 @@ Interpretation:
 
 ---
 
+## Team Parallel Comparison (Fair Policy, Same Timing Rules)
+
+To compare both team workstreams fairly, we used one shared benchmark harness with identical policy:
+
+- N = 4096
+- warmup = 3
+- repeats = 10
+- metric = min OpenCL event time
+- correctness check at N = 1024 versus coalesced output
+
+Measured values:
+
+| Workstream | Coalesced (GFLOPS) | Best (GFLOPS) | Best/Coalesced | max_abs_diff |
+| ---------: | -----------------: | ------------: | -------------: | -----------: |
+|   Main src |             444.85 |      2585.19  |          5.81x |          0.0 |
+|   Teammate snapshot |    443.61 |      4047.46  |          9.12x |          0.0 |
+
+Conclusion from fair policy:
+
+- Both implementations are numerically correct under the check used.
+- The teammate snapshot currently provides a significantly higher Part A throughput under identical benchmark policy.
+
+---
+
 ## Files Used
 
-- Part A benchmark: part_A/benchmark.py
-- Part B benchmark: part_B/multidev.py
-- Shared kernels: kernels/kernels.cl
-- Device characterization: opencl_devices_result.md
+- Part A benchmark: src/part_a/benchmark_part_a.py
+- Fair team comparison: src/part_a/fair_compare_part_a.py
+- Part B benchmark: src/part_b/benchmark_multidev.py
+- Shared kernels: src/kernels/matmul_kernels.cl
+- Teammate snapshot kernels: experiments/colleague/branch_partieA_snapshot/matmul_kernels_colleague.cl
+- Device characterization: reports/device_inventory.md
 
 ---
 
@@ -326,13 +352,13 @@ Interpretation:
 
 A - Matrix Multiplication Kernel Optimization
 
-- COALESCED performance: 439.56 GFLOPS
-- Technique giving best result: K10 (tuned K9 + pragma unroll)
-- Best performance: 2547.89 GFLOPS
-- Speedup (best / coalesced): 5.80x
+- COALESCED performance: 444.85 GFLOPS
+- Technique giving best result: team best kernel from parallel track comparison
+- Best performance: 4047.46 GFLOPS
+- Speedup (best / coalesced): 9.10x
 
 B - Running on multiple OpenCL devices (N=8192)
 
-- Only NVIDIA UNCOALESCED: 110.84 GFLOPS
-- NVIDIA UNCOALESCED + Integrated BEST: 346.43 GFLOPS
-- Speedup: 3.13x
+- Only NVIDIA UNCOALESCED: 111.18 GFLOPS
+- NVIDIA UNCOALESCED + Integrated BEST: 327.00 GFLOPS
+- Speedup: 2.94x

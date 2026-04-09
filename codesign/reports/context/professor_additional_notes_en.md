@@ -14,6 +14,7 @@ Ci-joint le texte de TP relatif a la manip "programmation OpenCL".
 English translation:
 
 Attached is the TP text related to the OpenCL programming lab.
+
 1. Work in teams of 2, 3, or 4 students.
 2. Provide results on an NVIDIA RTX2050 or RTX3050. If no team member has this GPU, run the tests on a classmate's PC.
 3. Submit the file TP_OpenCL_Results_summary.docx by April 9.
@@ -24,6 +25,6 @@ Attached is the TP text related to the OpenCL programming lab.
 
 ## Practical interpretation for this repository
 
-- Part A performance tuning directly impacts half of the grade.
-- Part B speedup and justification are mandatory and should be traceable in code and report artifacts.
-- Keep benchmark and report evidence organized for potential validation.
+- Part A and Part B performance evidence directly impacts 50% of the final grade.
+- The written report quality contributes the remaining 50%.
+- Keep reproducible benchmark evidence and clear methodology ready for validation.
