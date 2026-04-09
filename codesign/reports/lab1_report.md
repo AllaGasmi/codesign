@@ -325,10 +325,10 @@ To compare both team workstreams fairly, we used one shared benchmark harness wi
 
 Measured values:
 
-| Workstream | Coalesced (GFLOPS) | Best (GFLOPS) | Best/Coalesced | max_abs_diff |
-| ---------: | -----------------: | ------------: | -------------: | -----------: |
-|   Main src |             444.85 |      2585.19  |          5.81x |          0.0 |
-|   Teammate snapshot |    443.61 |      4047.46  |          9.12x |          0.0 |
+|        Workstream | Coalesced (GFLOPS) | Best (GFLOPS) | Best/Coalesced | max_abs_diff |
+| ----------------: | -----------------: | ------------: | -------------: | -----------: |
+|          Main src |             444.85 |       2585.19 |          5.81x |          0.0 |
+| Teammate snapshot |             443.61 |       4047.46 |          9.12x |          0.0 |
 
 Conclusion from fair policy:
 
