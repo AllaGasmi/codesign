@@ -44,7 +44,7 @@ def align_rows(rows: int) -> int:
 
 def load_kernel_source() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
-    kernel_src = os.path.join(here, "..", "kernels", "kernels.cl")
+    kernel_src = os.path.join(here, "..", "kernels", "matmul_kernels.cl")
     with open(kernel_src, "r", encoding="utf-8") as f:
         body = f.read()
     defines = f"""

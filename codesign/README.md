@@ -1,9 +1,11 @@
 # OpenCL Matrix Multiplication for Codesign Lab 1
 
 Suggested repository name:
+
 - codesign-opencl-lab1-matmul
 
 Suggested repository topics/tags:
+
 - opencl
 - gpu-computing
 - matrix-multiplication
@@ -16,6 +18,7 @@ Suggested repository topics/tags:
 ## Project Purpose
 
 This repository contains Lab 1 work for OpenCL programming:
+
 - Part A: optimize matrix multiplication kernels and measure speedups.
 - Part B: run matrix multiplication on two OpenCL devices and maximize speedup.
 
@@ -24,20 +27,20 @@ The repository is organized to keep production code, experiments, and reports se
 ## Repository Structure
 
 - src: production candidate code
-  - src/kernels/matmul_kernels.cl
-  - src/part_a/benchmark_part_a.py
-  - src/part_a/autotune_part_a.py
-  - src/part_a/fair_compare_part_a.py
-  - src/part_b/benchmark_multidev.py
+    - src/kernels/matmul_kernels.cl
+    - src/part_a/benchmark_part_a.py
+    - src/part_a/autotune_part_a.py
+    - src/part_a/fair_compare_part_a.py
+    - src/part_b/benchmark_multidev.py
 - experiments: isolated comparisons and side work
-  - experiments/colleague/branch_partieA_snapshot/
-  - experiments/yours/
+    - experiments/colleague/branch_partieA_snapshot/
+    - experiments/yours/
 - results: benchmark/autotuning outputs
-  - results/part_a/
+    - results/part_a/
 - reports: report artifacts and assignment context
-  - reports/lab1_report.md
-  - reports/device_inventory.md
-  - reports/context/
+    - reports/lab1_report.md
+    - reports/device_inventory.md
+    - reports/context/
 - legacy: older scripts kept for traceability
 
 ## Assignment Context in English
@@ -49,18 +52,20 @@ The repository is organized to keep production code, experiments, and reports se
 ## Quick Start
 
 Prerequisites:
+
 - Python 3.10+
 - pyopencl
 - numpy
 - OpenCL drivers for your GPUs
 
 Typical runs:
+
 - Part A benchmark: python src/part_a/benchmark_part_a.py
-- Part A fair compare (your kernel vs colleague snapshot):
+- Part A fair compare (team parallel tracks under identical timing policy):
   python src/part_a/fair_compare_part_a.py --n 4096 --check-n 1024 --warmup 3 --repeats 10
 - Part B benchmark: python src/part_b/benchmark_multidev.py
 
-## Coexistence Model (Your Work and Colleague Work)
+## Coexistence Model (Team Parallel Work)
 
 - Your active implementation stays under src.
 - Colleague implementation is frozen under experiments/colleague/branch_partieA_snapshot.
@@ -71,6 +76,7 @@ This avoids accidental overwrite and keeps review clean.
 ## Current Status Summary
 
 See reports/context/work_status_and_ownership.md for:
+
 - what has been done in this branch,
 - what came from your implementation work,
 - what is imported from colleague snapshot,
